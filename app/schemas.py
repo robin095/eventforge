@@ -27,3 +27,12 @@ class EventResponse(BaseModel):
     venue: VenueResponse
     model_config = ConfigDict(from_attributes=True)
 
+class UserCreate(BaseModel):
+    name: str
+    email: str
+
+class ReservationCreate(BaseModel):
+    user_id: int
+    event_id: int
+    seat_id: int
+

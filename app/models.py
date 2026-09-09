@@ -20,6 +20,7 @@ class Event(Base):
 
     venue = relationship("Venue", back_populates="events")
     seats = relationship("Seat", back_populates="event")
+    reservations = relationship("Reservation", back_populates="event")
 
 class Seat(Base):
     __tablename__ = "seats"
@@ -31,3 +32,26 @@ class Seat(Base):
     event_id = Column (Integer, ForeignKey("events.id"), nullable=False)
 
     event = relationship("Event", back_populates="seats")
+    reservations = relationship("Reservation", back_populates="seat")
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+
+    reservations = relationship("Reservation", back_populates="user")
+
+class Reservation(Base):
+    __tablename__ = "reservations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    seat_id = Column(Integer, ForeignKey("seats.id"), nullable=False)
+
+    user = relationship("User", back_populates="reservations")
+    event = relationship("Event", back_populates="reservations")
+    seat = relationship("Seat", back_populates="reservations")
+
