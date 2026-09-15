@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.database import Base, engine, get_db
 from app import models, schemas
@@ -196,7 +197,16 @@ def create_reservation(
     )
 
     db.add(db_reservation)
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Seat is already reserved"
+        )
+    
     db.refresh(db_reservation)
 
     return db_reservation
