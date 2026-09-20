@@ -63,7 +63,7 @@ def create_venue(
 
     return db_venue
 
-@app.get("/events/{event_id}/seats")
+@app.get("/events/{event_id}/seats", response_model=list[schemas.SeatResponse])
 def get_seats(
     event_id: int,
     db: Session = Depends(get_db)
@@ -81,7 +81,7 @@ def get_seats(
     ).all()
 
     return seats
-@app.post("/events/{event_id}/seats")
+@app.post("/events/{event_id}/seats", response_model=schemas.SeatResponse)
 def create_seat(
         event_id: int,
         seat: schemas.SeatCreate,
@@ -109,13 +109,31 @@ def create_seat(
     return db_seat
 
 
-@app.get("/users")
+@app.get("/users", response_model=list[schemas.UserResponse])
 def get_users(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
     return users
 
+@app.get("/users/{user_id}", response_model=schemas.UserResponse)
+def get_user(
+        user_id: int,
+        db: Session = Depends(get_db)
+):
+    user = (
+        db.query(models.User)
+        .filter(models.User.id == user_id)
+        .first()
+    )
 
-@app.post("/users")
+    if user is None:
+        raise HTTPException(
+            status_code = 404,
+            detail= "User not found"
+        )
+
+    return user
+
+@app.post("/users", response_model=schemas.UserResponse)
 def create_user(
         user: schemas.UserCreate,
         db: Session = Depends(get_db)
@@ -131,7 +149,7 @@ def create_user(
 
     return db_user
 
-@app.post("/reservations")
+@app.post("/reservations", response_model=schemas.ReservationResponse)
 def create_reservation(
         reservation: schemas.ReservationCreate,
         db: Session = Depends(get_db)
@@ -206,7 +224,55 @@ def create_reservation(
             status_code=400,
             detail="Seat is already reserved"
         )
-    
+
     db.refresh(db_reservation)
 
     return db_reservation
+
+@app.get("/reservations/{reservation_id}",
+         response_model=schemas.ReservationResponse
+         )
+def get_reservation(
+        reservation_id: int,
+        db: Session = Depends(get_db)
+):
+    reservation = (
+        db.query(models.Reservation)
+        .filter(models.Reservation.id == reservation_id)
+        .first()
+    )
+
+    if reservation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Reservation not found"
+        )
+
+    return reservation
+
+@app.get("/users/{user_id}/reservations",
+         response_model=list[schemas.ReservationResponse]
+)
+def get_user_reservations(
+        user_id: int,
+        db: Session = Depends(get_db)
+):
+    user = (
+        db.query(models.User)
+        .filter(models.User.id == user_id)
+        .first()
+    )
+
+    if user is None:
+        raise HTTPException(
+        status_code=404,
+        detail="User not found"
+        )
+
+    reservations = (
+        db.query(models.Reservation)
+        .filter(models.Reservation.user_id == user_id)
+        .all()
+    )
+
+    return reservations

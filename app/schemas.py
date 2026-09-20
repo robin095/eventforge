@@ -31,8 +31,31 @@ class UserCreate(BaseModel):
     name: str
     email: str
 
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class SeatResponse(BaseModel):
+    id: int
+    section: str
+    row: str
+    number: int
+    event_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
 class ReservationCreate(BaseModel):
     user_id: int
     event_id: int
     seat_id: int
 
+class ReservationResponse(BaseModel):
+    id: int
+    user_id: int
+    event_id: int
+    seat_id: int
+
+    model_config = ConfigDict(from_attributes=True)
