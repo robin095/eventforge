@@ -57,5 +57,6 @@ class ReservationResponse(BaseModel):
     user_id: int
     event_id: int
     seat_id: int
+    status: str
 
     model_config = ConfigDict(from_attributes=True)

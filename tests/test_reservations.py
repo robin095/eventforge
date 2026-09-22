@@ -1,4 +1,3 @@
-from calendar import firstweekday
 
 import pytest
 import uuid
@@ -287,15 +286,15 @@ def test_get_user_returns_user(test_user):
 def test_get_nonexistent_user_returns_404():
     db = SessionLocal()
 
-    max_id = (
-        db.query(models.User.id)
+    max_id = db.scalar(
+        select(models.User.id)
         .order_by(models.User.id.desc())
-        .first()
+        .limit(1)
     )
 
     db.close()
 
-    non_existent_id = 1 if max_id is None else max_id[0] + 1
+    non_existent_id = 1 if max_id is None else max_id + 1
 
     response = client.get(f"/users/{non_existent_id}")
 
@@ -331,20 +330,22 @@ def test_get_reservation_returns_reservation(
         "id": reservation_id,
         "user_id": test_user.id,
         "event_id": test_event.id,
-        "seat_id": test_seat.id
+        "seat_id": test_seat.id,
+        "status": "active"
     }
 
 def test_get_nonexistent_reservation_returns_404():
     db = SessionLocal()
 
-    max_id = (db.query(models.Reservation.id)
-                       .order_by(models.Reservation.id.desc())
-                       .first()
-                       )
+    max_id = db.scalar(
+        select(models.Reservation.id)
+        .order_by(models.Reservation.id.desc())
+        .limit(1)
+    )
 
     db.close()
 
-    non_existent_id = 1 if max_id is None else max_id[0] + 1
+    non_existent_id = 1 if max_id is None else max_id + 1
 
     response = client.get(f"/reservations/{non_existent_id}")
 
@@ -373,9 +374,6 @@ def test_get_user_reservations_returns_reservations(
         f"/users/{test_user.id}/reservations"
     )
 
-    print(response.status_code)
-    print(response.json())
-
     assert response.status_code == 200
 
     reservations = response.json()
@@ -385,7 +383,8 @@ def test_get_user_reservations_returns_reservations(
         "id": create_response.json()["id"],
         "user_id": test_user.id,
         "event_id": test_event.id,
-        "seat_id": test_seat.id
+        "seat_id": test_seat.id,
+        "status": "active"
 
     }
 
@@ -408,3 +407,77 @@ def test_get_reservations_for_nonexistent_user_returns_404():
     assert response.json() == {
         "detail": "User not found"
     }
+
+def test_cancel_reservation_changes_status(
+        test_user,
+        test_event,
+        test_seat
+):
+    create_response = client.post(
+        "/reservations",
+        json = {
+            "user_id" : test_user.id,
+            "event_id": test_event.id,
+            "seat_id": test_seat.id
+        }
+    )
+
+    reservation_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/reservations/{reservation_id}/cancel"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelled"
+
+def test_cancel_nonexistent_reservation_returns_404():
+    db = SessionLocal()
+
+    max_id = db.scalar(
+        select(models.Reservation.id)
+        .order_by(models.Reservation.id.desc())
+        .limit(1)
+    )
+
+    db.close()
+
+    nonexistent_id = 1 if max_id is None else max_id + 1
+
+
+    response = client.patch(
+        f"/reservations/{nonexistent_id}/cancel"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Reservation not found"
+
+def test_cancel_already_cancelled_reservation_returns_400(
+        test_user,
+        test_event,
+        test_seat
+):
+    create_response = client.post(
+        "/reservations",
+        json = {
+            "user_id": test_user.id,
+            "event_id": test_event.id,
+            "seat_id": test_seat.id
+        }
+    )
+
+    reservation_id = create_response.json()["id"]
+
+    first_cancel_response = client.patch(
+        f"/reservations/{reservation_id}/cancel"
+    )
+
+    assert first_cancel_response.status_code == 200
+    assert first_cancel_response.json()["status"] == "cancelled"
+
+    second_cancel_response = client.patch(
+        f"/reservations/{reservation_id}/cancel"
+    )
+
+    assert second_cancel_response.status_code == 400
+    assert second_cancel_response.json()["detail"] == "Reservation is already cancelled"

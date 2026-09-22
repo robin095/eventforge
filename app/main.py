@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 
 from app.database import Base, engine, get_db
 from app import models, schemas
@@ -276,3 +277,34 @@ def get_user_reservations(
     )
 
     return reservations
+
+@app.patch(
+    "/reservations/{reservation_id}/cancel",
+    response_model = schemas.ReservationResponse
+)
+def cancel_reservation(
+        reservation_id: int,
+        db: Session = Depends(get_db)
+):
+    reservation = db.scalar(
+        select(models.Reservation)
+        .where(models.Reservation.id == reservation_id)
+    )
+    if reservation is None:
+        raise HTTPException(
+            status_code=404,
+            detail = "Reservation not found"
+        )
+
+    if reservation.status == "cancelled":
+        raise HTTPException(
+            status_code=400,
+            detail = "Reservation is already cancelled"
+        )
+
+    reservation.status = "cancelled"
+
+    db.commit()
+    db.refresh(reservation)
+
+    return reservation

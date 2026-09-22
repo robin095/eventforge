@@ -57,6 +57,7 @@ class Reservation(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
     seat_id = Column(Integer, ForeignKey("seats.id"), nullable=False)
+    status = Column(String, nullable=False, default="active")
 
     user = relationship("User", back_populates="reservations")
     event = relationship("Event", back_populates="reservations")
